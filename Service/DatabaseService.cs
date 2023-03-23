@@ -63,7 +63,7 @@ namespace DatabaseUtils.Service
                     using (SqlCommand comm = conn.CreateCommand())
                     {
                         comm.CommandText = @"SELECT 1 AS Id, TABLE_NAME AS Name
-                                                FROM " + (string.IsNullOrEmpty(query.Conn.InitialCatalog) ? "" : ("[" + query.Conn.InitialCatalog + "].")) + @"INFORMATION_SCHEMA.TABLES
+                                                FROM  INFORMATION_SCHEMA.TABLES
                                                 WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME <> 'sysdiagrams' ";
 
 
@@ -113,7 +113,7 @@ namespace DatabaseUtils.Service
                     using (SqlCommand comm = conn.CreateCommand())
                     {
                         comm.CommandText = @"SELECT ORDINAL_POSITION AS Id, COLUMN_NAME AS Name, DATA_TYPE AS DataType, ISNULL(CHARACTER_MAXIMUM_LENGTH, 0) AS Length
-                                                FROM  " + (string.IsNullOrEmpty(query.Conn.InitialCatalog) ? "" : ("[" + query.Conn.InitialCatalog + "].")) + @"INFORMATION_SCHEMA.COLUMNS
+                                                FROM INFORMATION_SCHEMA.COLUMNS
                                                 WHERE TABLE_NAME = @TableName ";
 
                         comm.Parameters.AddWithValue("@TableName", query.Parameter.Name);
@@ -180,7 +180,7 @@ namespace DatabaseUtils.Service
             try
             {
 
-                using (SqlConnection conn = new SqlConnection(query.Conn.GetConnectionStringWithCatalog()))
+                using (SqlConnection conn = new SqlConnection(query.Conn.GetConnectionString()))
                 {
                     using (SqlCommand comm = conn.CreateCommand())
                     {

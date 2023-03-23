@@ -16,7 +16,14 @@ namespace DatabaseUtils
 
         private void btnCheckConnection_Click(object sender, EventArgs e)
         {
-            DbConnectionString dbConnectionString = new DbConnectionString(txtConnectionString.Text); 
+            DbConnectionString dbConnectionString = new DbConnectionString
+            {
+                DataSource = txtDbServer.Text,
+                WindowsAuthenticaton = cbWindowsAuhentication.Checked,
+                UserId = txtDbUsername.Text,
+                Password = txtDbPassword.Text 
+            };
+
             var result = DatabaseService.GetDataBases(new Query<Database>
             {
                 Conn = dbConnectionString
@@ -34,7 +41,13 @@ namespace DatabaseUtils
 
         private void btnConnect_Click(object sender, EventArgs e)
         {
-            DbConnectionString dbConnectionString = new DbConnectionString(txtConnectionString.Text);
+            DbConnectionString dbConnectionString = new DbConnectionString
+            {
+                DataSource = txtDbServer.Text,
+                WindowsAuthenticaton = cbWindowsAuhentication.Checked,
+                UserId = txtDbUsername.Text,
+                Password = txtDbPassword.Text
+            };
             var result = DatabaseService.GetDataBases(new Query<Database>
             {
                 Conn = dbConnectionString
@@ -42,7 +55,7 @@ namespace DatabaseUtils
 
             if (result.Result)
             {
-                GlobalValues.ConnectionString = dbConnectionString.ConnectionString;
+                GlobalValues.DbConnectionString = dbConnectionString;
                 ActionsForm actionsForm = new ActionsForm();
                 actionsForm.Show();
                 this.Hide(); 

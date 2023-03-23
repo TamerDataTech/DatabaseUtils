@@ -4,14 +4,9 @@ using DatabaseUtils.Model;
 using DatabaseUtils.Service;
 using System;
 using System.ComponentModel;
-using System.Data.Common;
-using System.Data.SqlClient;
-using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using DatabaseUtils.Utils;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Threading;
 using System.Collections.Generic;
 
@@ -35,7 +30,7 @@ namespace DatabaseUtils
 
         private void AuditForm_Load(object sender, EventArgs e)
         {
-            DbConnectionString dbConnectionString = new DbConnectionString(GlobalValues.ConnectionString);
+            DbConnectionString dbConnectionString = new DbConnectionString(GlobalValues.DbConnectionString);
             var result = DatabaseService.GetDataBases(new Query<Database>
             {
                 Conn = dbConnectionString
@@ -83,10 +78,10 @@ namespace DatabaseUtils
 
         private void btnDbGetTables_Click(object sender, EventArgs e)
         {
-            RefreshColumns(); 
+            RefreshTables(); 
         }
 
-        private void RefreshColumns()
+        private void RefreshTables()
         {
             if (_tables != null)
                 _tables.Clear();
@@ -101,7 +96,7 @@ namespace DatabaseUtils
             }
 
 
-            DbConnectionString dbConnectionString = new DbConnectionString(GlobalValues.ConnectionString);
+            DbConnectionString dbConnectionString = new DbConnectionString(GlobalValues.DbConnectionString);
             dbConnectionString.InitialCatalog = database.Name;
             var result = DatabaseService.GetDataBaseTables(new Query<Database>
             {
@@ -178,12 +173,13 @@ namespace DatabaseUtils
             if (!bwLogs.IsBusy)
                 bwLogs.RunWorkerAsync();
 
+            DbConnectionString dbConnectionString = new DbConnectionString(GlobalValues.DbConnectionString);
+
             // Generate New db if __New__
             // if new we have to check if same db exists before  
             if (newDb)
             {
-                DbConnectionString dbConnectionString = new DbConnectionString(GlobalValues.ConnectionString);
-
+                
                 var result = DatabaseService.GetDataBases(new Query<Database>
                 {
                     Conn = dbConnectionString
@@ -221,8 +217,7 @@ namespace DatabaseUtils
             Log($"Checking Tables");
             var targetTables = new List<DatabaseTable>();
             if (!newDb)
-            {
-                DbConnectionString dbConnectionString = new DbConnectionString(GlobalValues.ConnectionString);
+            { 
                 dbConnectionString.InitialCatalog = targetDb;
                 var result = DatabaseService.GetDataBaseTables(new Query<Database>
                 {
@@ -243,9 +238,10 @@ namespace DatabaseUtils
             {
                 var sourceTable = checkedTable as DatabaseTable;
 
+                var logPrefix = "\t";
+
                 Log($"Checking table {sourceTable.Name}!");
-                // Get table columns from source ----------------------------------------------------------- 
-                DbConnectionString dbConnectionString = new DbConnectionString(GlobalValues.ConnectionString);
+                // Get table columns from source -----------------------------------------------------------  
                 dbConnectionString.InitialCatalog = sourceDb.Name;
                 var columnsResult = DatabaseService.GetDataBaseTableColumns(new Query<DatabaseTable>
                 {
@@ -258,7 +254,7 @@ namespace DatabaseUtils
 
                 if (!columnsResult.Result)
                 {
-                    Log($"Could not get {sourceTable.Name} database table columns! Error: {columnsResult.ErrorMessage}");
+                    Log($"{logPrefix} Could not get {sourceTable.Name} database table columns! Error: {columnsResult.ErrorMessage}");
                     StopCleanAndReturn();
                 }
 
@@ -270,7 +266,7 @@ namespace DatabaseUtils
 
                 if (targetTable == null)
                 {
-                    Log($"Creating log table {logTableName} on target Db {targetDb} ");
+                    Log($"{logPrefix} Creating log table {logTableName} on target Db {targetDb} ");
 
                     string createTableCommandText = $" USE {targetDb}; ";
                     createTableCommandText += $"CREATE TABLE {logTableName} ( ";
@@ -305,12 +301,12 @@ namespace DatabaseUtils
                     if (!executeResult.Result)
                     {
 
-                        Log($"Could not create {logTableName} database table! Error: {executeResult.ErrorMessage}");
+                        Log($"{logPrefix} Could not create {logTableName} database table! Error: {executeResult.ErrorMessage}");
                         StopCleanAndReturn();
                     }
                     else
                     {
-                        Log($" {logTableName} database table created!");
+                        Log($"{logPrefix} {logTableName} database table created!");
                     }
                 }
                 else
@@ -327,7 +323,7 @@ namespace DatabaseUtils
 
                     if (!targetColumnsResult.Result)
                     {
-                        Log($"Could not get target {logTableName} database table columns! Error: {targetColumnsResult.ErrorMessage}");
+                        Log($"{logPrefix} Could not get target {logTableName} database table columns! Error: {targetColumnsResult.ErrorMessage}");
                         StopCleanAndReturn();
                     }
 
@@ -358,12 +354,12 @@ namespace DatabaseUtils
                         if (!executeResult.Result)
                         {
 
-                            Log($"Could not add {logTableName} missed columnss! Error: {executeResult.ErrorMessage}");
+                            Log($"{logPrefix} Could not add {logTableName} missed columnss! Error: {executeResult.ErrorMessage}");
                             StopCleanAndReturn();
                         }
                         else
                         {
-                            Log($" {logTableName} database table missed columns added!");
+                            Log($"{logPrefix} {logTableName} database table missed columns added!");
                         }
 
                     }
@@ -375,7 +371,7 @@ namespace DatabaseUtils
                 //// Create new table if not exists OR Check if missed columns created and add them --
                 //Log($"Create new table if not exists OR Check if missed columns created and add them");
                 // Drop triggers and recreate them ------------------------------------------------- 
-                Log($"Drop triggers and recreate them");
+                //Log($"Drop triggers and recreate them");
 
                 string columsScript = "";
 
@@ -414,7 +410,7 @@ namespace DatabaseUtils
                 }
                 else
                 {
-                    Log($" {sourceTable.Name} triggers dropped!");
+                    Log($"{logPrefix} {sourceTable.Name} triggers dropped!");
                 }
 
                 dbConnectionString.InitialCatalog = sourceDb.Name;
@@ -456,12 +452,12 @@ namespace DatabaseUtils
                 if (!executeResultInsert.Result)
                 {
 
-                    Log($"Could not create {sourceTable.Name} Insert trigger! Error: {executeResultInsert.ErrorMessage}");
+                    Log($"{logPrefix} Could not create {sourceTable.Name} Insert trigger! Error: {executeResultInsert.ErrorMessage}");
                     StopCleanAndReturn();
                 }
                 else
                 {
-                    Log($" {sourceTable.Name} Insert trigger created!");
+                    Log($"{logPrefix} {sourceTable.Name} Insert trigger created!");
                 }
 
                 string createUpdateTriggerScript = @" 
@@ -502,12 +498,12 @@ namespace DatabaseUtils
                 if (!executeResultUpdate.Result)
                 {
 
-                    Log($"Could not create {sourceTable.Name} Update trigger! Error: {executeResultUpdate.ErrorMessage}");
+                    Log($"{logPrefix} Could not create {sourceTable.Name} Update trigger! Error: {executeResultUpdate.ErrorMessage}");
                     StopCleanAndReturn();
                 }
                 else
                 {
-                    Log($" {sourceTable.Name} Update trigger created!");
+                    Log($"{logPrefix} {sourceTable.Name} Update trigger created!");
                 }
 
 
@@ -549,12 +545,12 @@ namespace DatabaseUtils
                 if (!executeResultDelete.Result)
                 {
 
-                    Log($"Could not create {sourceTable.Name} Delete trigger! Error: {executeResultDelete.ErrorMessage}");
+                    Log($"{logPrefix} Could not create {sourceTable.Name} Delete trigger! Error: {executeResultDelete.ErrorMessage}");
                     StopCleanAndReturn();
                 }
                 else
                 {
-                    Log($" {sourceTable.Name} Delete trigger created!");
+                    Log($"{logPrefix} {sourceTable.Name} Delete trigger created!");
                 }
 
                 // ---------------------------------------------------------------------------------
@@ -614,7 +610,7 @@ namespace DatabaseUtils
 
         private void cboDbNames_SelectedIndexChanged(object sender, EventArgs e)
         {
-            RefreshColumns();
+            RefreshTables();
         }
     }
 }
